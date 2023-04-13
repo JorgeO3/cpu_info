@@ -5,16 +5,161 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <script src="//unpkg.com/alpinejs" defer></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@400;700&display=swap" rel="stylesheet">
     <link rel="icon" href="data:,">
-    <link rel="stylesheet" href="./assets/index.css" type="text/css">
     <title>Cpu Usage</title>
 </head>
 
 <body>
-    <div x-data="{ title: 'Hola mundo' }" x-text="title">
+    <script type="importmap">
+        {
+          "imports": {
+            "vue": "https://unpkg.com/vue@3/dist/vue.esm-browser.js"
+          }
+        }
+    </script>
 
+    <div id="app">
+        <div class="cpu-info-container">
+            <div style="margin-top: 5px; text-align: center;">
+                <div class="cpu-container">
+                    <div class="cpu" :style="`width: ${number}%`"></div>
+                    <p class="cpu-text">CPU_1: 53%</p>
+                </div>
+            </div>
+        </div>
     </div>
+
+    <script type="module">
+        import { createApp, onMounted, ref } from 'vue';
+
+        createApp({
+            components: {},
+            setup() {
+                const data = ref();
+
+                // const evtSource = new EventSource("http://localhost:3000/sse");
+
+                // evtSource.onmessage = ({ data }) => {
+                //     console.log(data);
+                // };
+
+                return {
+                    message: "Hola mundo",
+                    number: 90,
+                }
+            },
+        }).mount('#app')
+    </script>
+
+    <style>
+        html,
+        body,
+        #app {
+            background-color: #3C474B;
+            height: 100%;
+        }
+
+        * {
+            margin: 0;
+            font-size: 22px;
+            color: white;
+            font-family: 'Roboto Condensed', sans-serif;
+        }
+
+        .cpu-info-container {
+            height: 100%;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .cpu-container {
+            height: 40px;
+            width: 350px;
+            background-color: #88AEC5;
+            border-radius: 4px;
+            position: relative;
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            justify-content: flex-start;
+        }
+
+        .cpu {
+            height: 100%;
+            display: flex;
+            border-radius: 4px;
+            flex-direction: row;
+            align-items: center;
+            justify-content: center;
+            background-color: #4F7CAC;
+            transition: all 0.16s linear;
+        }
+
+        .cpu-text {
+            width: 100%;
+            position: absolute;
+        }
+    </style>
 </body>
 
 </html>
+
+
+
+
+<!-- <script>
+        document.addEventListener('alpine:init', () => {
+            Alpine.data('event', () => ({
+                number: 0,
+
+                toggle() {
+                    this.number += 10;
+                }
+            }))
+        })
+    </script>
+
+    <div class="cpu-info-container" x-data="event">
+        <div style="margin-top: 5px; text-align: center;">
+            <div class="cpu-container">
+                <div class="cpu" :style="`width: ${number}%`"></div>
+                <p class="cpu-text">CPU_1: 53%</p>
+            </div>
+        </div>
+
+        <div style="margin-top: 5px; text-align: center;">
+            <div class="cpu-container">
+                <div class="cpu" :style="`width: ${number}%`"></div>
+                <p class="cpu-text">CPU_1: 54%</p>
+            </div>
+        </div>
+
+        <div style="margin-top: 5px; text-align: center;">
+            <div class="cpu-container">
+                <div class="cpu" :style="`width: ${number}%`"></div>
+                <p class="cpu-text">CPU_1: 53%</p>
+            </div>
+        </div>
+
+        <div style="margin-top: 5px; text-align: center;">
+            <div class="cpu-container">
+                <div class="cpu" :style="`width: ${number}%`"></div>
+                <p class="cpu-text">CPU_1: 53%</p>
+            </div>
+        </div>
+
+        <div style="margin-top: 5px; text-align: center;">
+            <div class="cpu-container">
+                <div class="cpu" :style="`width: ${number}%`"></div>
+                <p class="cpu-text">CPU_1: 53%</p>
+            </div>
+        </div>
+
+        <button @click="toggle()">Add</button>
+    </div> -->
