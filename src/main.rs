@@ -1,47 +1,28 @@
-#![allow(unused)]
-
 use axum::{
     extract::State,
-    response::{sse::Event, Sse},
+    response::sse::{Event, KeepAlive, Sse},
     routing::{get, get_service},
     Router,
 };
-use serde::{Deserialize, Serialize, Serializer, };
-use std::{
-    convert::Infallible,
-    net::SocketAddr,
-    rc::Rc,
-    sync::{Arc, Mutex},
-    time::Duration,
-};
-
-use futures_util::stream::{self, Stream};
+use std::{convert::Infallible, net::SocketAddr, sync::Arc};
+use async_stream::try_stream;
+use futures_util::stream::Stream;
 use tokio::sync::mpsc::{self, Receiver, Sender};
-use tokio_stream::StreamExt as _;
 use tower_http::services::ServeDir;
-use serde_json::Value;
 
-type CusomSender = Arc<Mutex<Sender<Data>>>;
-type CustomReceiver = Arc<Mutex<Receiver<Data>>>;
+type CusomSender<'a> = Arc<Sender<Vec<String>>>;
+type CustomReceiver<'a> = Arc<Receiver<Vec<String>>>;
 
 #[derive(Debug, Clone)]
-struct ApiState {
-    tx: CusomSender,
-    rx: CustomReceiver,
-}
-
-#[derive(Serialize, Deserialize, Default)]
-struct Data {
-    values: Vec<(String, f32)>,
+struct ApiState<'a> {
+    tx: CusomSender<'a>,
+    rx: CustomReceiver<'a>,
 }
 
 #[tokio::main]
 async fn main() {
-    let (tx, rx) = mpsc::channel::<Data>(10);
-    let (sender, receiver) = (Arc::new(Mutex::new(tx)), Arc::new(Mutex::new(rx)));
-
-    let tx_sender = Arc::clone(&sender);
-    let rx_receiver = Arc::clone(&receiver);
+    let (tx, rx) = mpsc::channel::<Vec<(&str, f32)>>(1);
+    let (sender, receiver) = (Arc::new(tx), Arc::new(rx));
 
     let api_state = ApiState {
         tx: Arc::clone(&sender),
@@ -54,12 +35,12 @@ async fn main() {
     .await;
 
     tokio::spawn(async move {
-        cpu_info(tx_sender, rx_receiver);
+        cpu_info(sender, receiver);
     })
     .await;
 }
 
-async fn server(state: ApiState) {
+async fn server<'a>(state: ApiState<'a>) {
     let mux = Router::new()
         .route("/", get_service(ServeDir::new("./assets")))
         .route("/sse", get(sse_handler))
@@ -82,27 +63,29 @@ fn cpu_info(tx: CusomSender, rx: CustomReceiver) {
         let usage = sys
             .cpus()
             .iter()
-            .map(|cpu| (cpu.name().to_string(), cpu.cpu_usage()))
-            .collect::<Vec<(String, f32)>>();
+            .map(|cpu| format!("{}: {}", cpu.name(), cpu.cpu_usage()).as_ref())
+            .collect::<Vec<&str>>();
 
-        tx.lock().unwrap().send(Data { values: usage });
+        tx.send(usage);
 
         std::thread::sleep(std::time::Duration::from_millis(1000));
     }
 }
 
-async fn sse_handler(
-    State(state): State<ApiState>,
+async fn sse_handler<'a>(
+    State(state): State<ApiState<'a>>,
 ) -> Sse<impl Stream<Item = Result<Event, Infallible>>> {
-    let data = state.rx.lock().unwrap().recv().await.unwrap();
-
-    let stream = stream::repeat_with(|| Event::default().data(serde_json::json!({name: "".to_string()})))
-        .map(Ok)
-        .throttle(Duration::from_secs(1));
-
-    Sse::new(stream).keep_alive(
-        axum::response::sse::KeepAlive::new()
-            .interval(Duration::from_secs(1))
-            .text("keep-alive-text"),
-    )
+    Sse::new(try_stream! {
+        loop {
+            match state.rx.recv().await {
+                Some(val) => {
+                    yield Event::default().data(val);
+                },
+                None => {
+                    tracing::error!("Failed to get");
+                }
+            };
+        }
+    })
+    .keep_alive(KeepAlive::default())
 }
