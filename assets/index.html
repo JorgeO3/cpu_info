@@ -38,18 +38,16 @@
         createApp({
             components: {},
             setup() {
-                const data = ref();
-
-                // const evtSource = new EventSource("http://localhost:3000/sse");
-
-                // evtSource.onmessage = ({ data }) => {
-                //     console.log(data);
-                // };
+                const data = ref(null);
+                const evtSource = new EventSource("http://localhost:3000/sse");
+                evtSource.onmessage = (data) => {
+                    console.log(data);
+                };
 
                 return {
                     message: "Hola mundo",
                     number: 90,
-                }
+                };
             },
         }).mount('#app')
     </script>
