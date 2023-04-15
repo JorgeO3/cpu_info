@@ -11,16 +11,21 @@ use futures::stream::Stream;
 use std::{convert::Infallible, sync::Arc};
 use std::{net::SocketAddr, time::Duration};
 use tokio::sync::broadcast::Sender;
-use tower_http::services::ServeDir;
+use tower_http::{services::ServeDir, trace::TraceLayer};
 
 type CustomSender = Arc<Sender<String>>;
 
 #[tokio::main]
 async fn main() {
+    std::env::set_var("RUST_LOG", "debug");
+    std::env::set_var("RUST_BACKTRACE", "1");
+    env_logger::init();
+
     let (tx, _rx) = tokio::sync::broadcast::channel::<String>(1);
 
     let sender = Arc::new(tx);
     let sender2 = Arc::clone(&sender);
+    
     tokio::spawn(async move {
         server(sender2).await;
     })
@@ -28,14 +33,13 @@ async fn main() {
     .unwrap();
 
     tokio::spawn(async move {
-        cpu_info(sender);
-    })
-    .await
-    .unwrap();
+        cpu_info(sender).await;
+    });
 }
 
 async fn server(state: CustomSender) {
     let mux = Router::new()
+        .layer(TraceLayer::new_for_http())
         .route("/", get_service(ServeDir::new("./assets")))
         .route("/sse", get(sse_handler))
         .with_state(state);
@@ -48,7 +52,7 @@ async fn server(state: CustomSender) {
         .unwrap();
 }
 
-fn cpu_info(tx: CustomSender) {
+async fn cpu_info(tx: CustomSender) {
     use sysinfo::{CpuExt, System, SystemExt};
 
     let mut sys = System::new_all();
@@ -61,6 +65,7 @@ fn cpu_info(tx: CustomSender) {
             .collect::<Vec<String>>();
 
         let data = usage.join(",");
+        println!("{}", data);
         tx.send(data).expect("Error");
 
         std::thread::sleep(std::time::Duration::from_millis(1000));
@@ -76,8 +81,8 @@ async fn sse_handler(
             match receiver.recv().await {
                 Ok(i) => {
                     println!("{}", i);
-                    yield Event::default().event("message").data(i);
-                }
+                    yield Event::default().data("asdasd");
+                },
                 Err(e) => {
                     tracing::error!("Failed to get {}", e);
                 }

@@ -8,6 +8,7 @@ edition = "2021"
 [dependencies]
 async-stream = "0.3.5"
 axum = "0.6.12"
+env_logger = "0.10.0"
 futures = "0.3.28"
 futures-util = {version = "0.3.28", features = ["channel"]}
 serde = { version = "1.0.160", features = ["derive"] }

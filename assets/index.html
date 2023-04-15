@@ -29,6 +29,7 @@
                     <p class="cpu-text">CPU_1: 53%</p>
                 </div>
             </div>
+            <button @click="onConnection">Call</button>
         </div>
     </div>
 
@@ -38,15 +39,18 @@
         createApp({
             components: {},
             setup() {
-                const data = ref(null);
-                const evtSource = new EventSource("http://localhost:3000/sse");
-                evtSource.onmessage = (data) => {
-                    console.log(data);
-                };
+                function onConnection() {
+                    const data = ref(null);
+                    const evtSource = new EventSource("http://localhost:3000/sse");
+                    evtSource.onmessage = (data) => {
+                        console.log(data);
+                    };
+                }
 
                 return {
                     message: "Hola mundo",
                     number: 90,
+                    onConnection
                 };
             },
         }).mount('#app')
