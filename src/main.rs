@@ -1,5 +1,3 @@
-// #![allow(unused)]
-
 use async_stream::try_stream;
 use axum::{
     extract::State,
@@ -26,15 +24,16 @@ async fn main() {
     let sender = Arc::new(tx);
     let sender2 = Arc::clone(&sender);
     
-    tokio::spawn(async move {
+    let thread_one = tokio::spawn(async move {
         server(sender2).await;
-    })
-    .await
-    .unwrap();
+    });
 
-    tokio::spawn(async move {
+    let thread_two = tokio::spawn(async move {
         cpu_info(sender).await;
     });
+
+    thread_one.await.unwrap();
+    thread_two.await.unwrap();
 }
 
 async fn server(state: CustomSender) {
