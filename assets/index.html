@@ -23,13 +23,14 @@
 
     <div id="app">
         <div class="cpu-info-container">
-            <div style="margin-top: 5px; text-align: center;">
-                <div class="cpu-container">
-                    <div class="cpu" :style="`width: ${number}%`"></div>
-                    <p class="cpu-text">CPU_1: 53%</p>
+            <template v-for="cpu in cpus" :key="cpu.name">
+                <div style="margin-top: 5px; text-align: center;">
+                    <div class="cpu-container">
+                        <div class="cpu" :style="`width: ${cpu.usage}%`"></div>
+                        <p class="cpu-text">{{ cpu.name }}</p>
+                    </div>
                 </div>
-            </div>
-            <button @click="onConnection">Call</button>
+            </template>
         </div>
     </div>
 
@@ -39,18 +40,22 @@
         createApp({
             components: {},
             setup() {
-                function onConnection() {
-                    const data = ref(null);
+                const cpus = ref(null);
+                onMounted(() => {
                     const evtSource = new EventSource("http://localhost:3000/sse");
-                    evtSource.onmessage = (data) => {
-                        console.log(data);
+
+                    evtSource.onmessage = ({ data }) => {
+                        cpus.value = data.split(",").map(val => {
+                            const data = val.replaceAll(" ", "").split(":");
+                            return { name: data[0], usage: data[1] };
+                        });
                     };
-                }
+                });
 
                 return {
                     message: "Hola mundo",
                     number: 90,
-                    onConnection
+                    cpus,
                 };
             },
         }).mount('#app')
@@ -100,7 +105,7 @@
             align-items: center;
             justify-content: center;
             background-color: #4F7CAC;
-            transition: all 0.16s linear;
+            transition: all 0.1s linear;
         }
 
         .cpu-text {
